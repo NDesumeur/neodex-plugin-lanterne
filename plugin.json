@@ -1,0 +1,20 @@
+{
+  "id": "neodex.lanterne",
+  "name": "Lanterne",
+  "version": "1.0.0",
+  "author": "NDesumeur",
+  "description": "Une petite voyageuse traverse une grotte sans fin avec sa lanterne. La lumière baisse : ramasse les fioles d'huile, évite la roche et les chauves-souris.",
+  "icon": "icon.png",
+  "entry": "index.js",
+  "view": "lanterne",
+  "neobase": ">=4.0.0",
+  "type": "app",
+  "category": "Jeux",
+  "mobile": false,
+  "system": false,
+  "dependencies": {},
+  "sdk": "2.1.0",
+  "permissions": [
+    "storage"
+  ]
+}
