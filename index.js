@@ -339,7 +339,7 @@ const lnCanvas = (w, h, fn) => { const c = el('canvas'); c.width = w; c.height =
 const hash = n => { n = Math.imul(n ^ n >>> 15, 0x2c1b3c6d); n = Math.imul(n ^ n >>> 12, 0x297a2d39); return ((n ^ n >>> 15) >>> 0) / 4294967296; };
 const noise = x => { const i = Math.floor(x), f = x - i, s = f * f * (3 - 2 * f); return hash(i) * (1 - s) + hash(i + 1) * s; };
 function lnCave(xw) {  // haut et bas de la grotte à la distance xw ; elle se resserre avec la distance
-  const gap = Math.max(66, 118 - xw / 120), c = LN.H / 2 + (noise(xw / 140) - .5) * 90 + (noise(xw / 37 + 50) - .5) * 24;
+  const gap = Math.max(74, 120 - xw / 160), c = LN.H / 2 + (noise(xw / 140) - .5) * 90 + (noise(xw / 37 + 50) - .5) * 24;
   const top = Math.max(6, c - gap / 2 + (noise(xw / 9 + 99) - .5) * 10), bot = Math.min(LN.H - 6, c + gap / 2 + (noise(xw / 11 + 7) - .5) * 10);
   const spike = Math.max(0, Math.min(bot - top - 46, hash(Math.floor(xw / 6) * 7 + 3) < .06 ? 10 + hash(Math.floor(xw / 6)) * 14 : 0));  // une pointe laisse toujours 46 px  // stalactites et stalagmites, 6 px de large
   return [top + (Math.floor(xw / 6) % 2 ? spike * (1 - Math.abs(xw % 6 - 3) / 3) : 0), bot - (Math.floor(xw / 6) % 2 ? 0 : spike * (1 - Math.abs(xw % 6 - 3) / 3))];
@@ -388,8 +388,9 @@ function lnUpdate() {
   if (ln.mode === 'over') { ln.dead++; if (ln.light > 0) ln.light = Math.max(0, ln.light - 1.5); return; }
   if (ln.mode !== 'play') { ln.d += .4; return; }
   const sp = 1.3 + Math.min(1.3, ln.d / 9000); ln.d += sp;
-  ln.vy = Math.max(-2.6, Math.min(2.6, ln.vy + (ln.up ? -.2 : .17))); ln.y += ln.vy;
-  ln.light -= .045 + Math.min(.04, ln.d / 60000);
+  const want = ln.up ? -1 : 1, acc = ln.vy * want < 0 ? .45 : .15;  // à contre-sens on freine fort : relâcher ne fait plus filer la lanterne
+  ln.vy = Math.max(-2.1, Math.min(2.1, ln.vy + want * acc)); ln.y += ln.vy;
+  ln.light -= .038 + Math.min(.035, ln.d / 70000);
   if (ln.light <= LN.LMIN) return lnDie('La flamme s\'est éteinte');
   // fioles d'huile au milieu de la grotte, chauves-souris qui ondulent
   if (--ln.next <= 0) { const xw = ln.d + LN.W + 10, [t, b] = lnCave(xw); ln.items.push({x: LN.W + 10, y: t + 14 + Math.random() * (b - t - 28)}); ln.next = 170 + Math.random() * 120; }
@@ -419,7 +420,7 @@ function lnUpdate() {
   for (const f of ln.fires) { f.x -= sp; if (!f.used && f.x <= LN.PX) { f.used = true; ln.light = LN.LMAX; ln.fireMsg = 120; lnBeep(523, .15); lnBeep(784, .35); } }
   ln.gems = ln.gems.filter(g => !g.got && g.x > -10); ln.falls = ln.falls.filter(f => !f.gone && f.x > -10); ln.drips = ln.drips.filter(d => !d.gone && d.x > -10); ln.fires = ln.fires.filter(f => f.x > -20);
   ln.items = ln.items.filter(i => !i.got && i.x > -10); ln.bats = ln.bats.filter(b => b.x > -10);
-  for (let dx = -4; dx <= 4; dx += 4) { const [t, b] = lnCave(ln.d + LN.PX + dx); if (ln.y - 6 < t || ln.y + 6 > b) return lnDie('Contre la roche'); }
+  for (let dx = -4; dx <= 4; dx += 4) { const [t, b] = lnCave(ln.d + LN.PX + dx); if (ln.y - 4 < t || ln.y + 4 > b) return lnDie('Contre la roche'); }
 }
 function lnDraw() {
   const g = ln.g, {W, H} = LN;
@@ -482,7 +483,8 @@ $('lnNew').onclick = () => { lnNew(); $('lnNew').blur(); };
   const same = lnCave(1234)[0] === lnCave(1234)[0];
   lnNew(); ln.mode = 'play'; ln.light = LN.LMIN + .01; ln.next = ln.nbat = 1e9; lnUpdate(); const dark = ln.mode === 'over';
   lnNew(); ln.mode = 'play'; ln.next = ln.nbat = ln.ngem = 1e9; ln.light = 60; ln.bats = [{x: LN.PX + 30, y0: ln.y, a: 0, amp: 0, y: ln.y}]; lnFlare(); const scared = !ln.bats.length && ln.light === 42;
-  console.assert(minGap >= 40 && same && dark && scared, 'lanterne', {minGap, same, dark, scared});
+  lnNew(); ln.mode = 'play'; ln.next = ln.nbat = ln.ngem = 1e9; ln.vy = -2.1; ln.up = false; const y0 = ln.y; let ymin = y0; for (let i = 0; i < 30 && ln.vy < 0; i++) { lnUpdate(); ymin = Math.min(ymin, ln.y); } const drift = y0 - ymin;
+  console.assert(minGap >= 40 && same && dark && scared && drift < 10, 'lanterne', {minGap, same, dark, scared, drift});
   if (realBest === undefined) delete games.best.lanterne; else games.best.lanterne = realBest; Object.assign(lns, realStats);
   ln = keep;
 }
