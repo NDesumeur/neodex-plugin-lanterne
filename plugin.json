@@ -1,7 +1,7 @@
 {
   "id": "neodex.lanterne",
   "name": "Lanterne",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "author": "NDesumeur",
   "description": "Vol sans fin dans une grotte obscure : maintiens Espace ou le clic pour monter, relâche pour descendre. La flamme de la lanterne baisse sans arrêt ; ramasse les fioles d'huile, les cristaux et un feu de camp tous les 1000 m, évite la roche, les stalactites et les chauves-souris, que l'éclat de lumière fait fuir. Une nouvelle zone tous les 500 m.",
   "icon": "icon.png",
