@@ -3,7 +3,7 @@
   "name": "Lanterne",
   "version": "1.0.3",
   "author": "NDesumeur",
-  "description": "Une petite voyageuse traverse une grotte sans fin avec sa lanterne. La lumière baisse : ramasse les fioles d'huile, évite la roche et les chauves-souris.",
+  "description": "Vol sans fin dans une grotte obscure : maintiens Espace ou le clic pour monter, relâche pour descendre. La flamme de la lanterne baisse sans arrêt ; ramasse les fioles d'huile, les cristaux et un feu de camp tous les 1000 m, évite la roche, les stalactites et les chauves-souris, que l'éclat de lumière fait fuir. Une nouvelle zone tous les 500 m.",
   "icon": "icon.png",
   "entry": "index.js",
   "view": "lanterne",
