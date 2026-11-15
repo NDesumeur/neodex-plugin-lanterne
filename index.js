@@ -2,12 +2,13 @@
 // Jeu NeoDex en pixel art dessiné à la main (police bitmap, cadres et boutons en pixels). Il tourne dans le bac à sable de NeoDex.
 const HTML = `<div class="appWrap wide">
   <div class="agHead"><span class="label">Lanterne</span><span class="hint">Maintiens espace, clic ou ↑ pour monter · X ou clic droit : éclat de lumière · P : pause</span></div>
-  <div class="gMain"><div class="gameBox"><canvas id="lnCanvas" width="288" height="216"></canvas></div>
+  <div class="gMain"><div class="gameBox"><canvas id="lnCanvas" width="288" height="216" role="img" aria-label="Lanterne"></canvas></div>
     <div class="gSide">
       <div class="sysCard"><b>RECORDS</b><div class="gStats" id="lnStats"></div></div>
-      <div class="row"><button class="btn main" id="lnNew">NOUVELLE PARTIE</button></div>
+      <div class="row"><button class="btn main" id="lnNew">NOUVELLE PARTIE</button><button class="btn" id="gFs">PLEIN ÉCRAN</button><button class="btn" id="lnMus">MUSIQUE : OUI</button></div>
+      <div class="sysCard"><b>LANTERNES</b><div class="hint">Elles se débloquent avec les cristaux ramassés au fil des parties.</div><div class="lnLamps" id="lnLamps"></div></div>
       <div class="hint">La flamme baisse toute seule. Les fioles d'huile la ravivent ; elles scintillent un peu dans le noir. Un feu de camp tous les 1000 m remplit la lanterne.</div>
-      <div class="hint">Éclat de lumière (X) : coûte de l'huile mais fait fuir les chauves-souris proches. Ramasse les cristaux. Tous les 500 m, une nouvelle zone : stalactites qui tombent, gouttes qui affaiblissent la flamme…</div>
+      <div class="hint">Éclat de lumière (X) : coûte de l'huile mais fait fuir les chauves-souris proches. Ramasse les cristaux. Tous les 500 m, une nouvelle zone avec sa musique : stalactites qui tombent et araignées dans la mine, gouttes et poissons qui sautent au lac, feux follets qui te suivent dans la lave…</div>
     </div></div>
 </div>`;
 const CSS = `.gMain{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
@@ -17,7 +18,11 @@ const CSS = `.gMain{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
 .gSide .sysCard{display:flex;flex-direction:column}
 .gStats{display:grid;grid-template-columns:1fr auto;gap:4px 14px}
 .gStats b{text-align:right}
-.gameBox canvas{max-width:620px;aspect-ratio:288/216}`;
+.gameBox canvas{width:min(100%,max(300px,calc((100vh - 190px) * 288 / 216)));height:auto;aspect-ratio:288/216}
+.gameBox:fullscreen{padding:0}
+.gameBox:fullscreen canvas{width:min(100vw,calc(100vh * 288 / 216))}
+.lnLamps{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.lnLamps .btn{justify-content:flex-start;text-align:left}`;
 /* ---------- l'habillage pixel art, dessiné à la main : police bitmap (accents compris), cadres, boutons, icônes ----------
    Tout est en pixels pleins, agrandis par 2 sans lissage : aucun dégradé, aucune ombre floue. */
 const PXK = (() => {
@@ -327,13 +332,19 @@ const clock = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStar
 
 /* ---------- Lanterne : grotte générée colonne par colonne (toujours la même pour une distance donnée), obscurité = un masque troué ---------- */
 const LN = {W: 288, H: 216, PX: 70, LMAX: 92, LMIN: 10};
-const lns = gstore('lanterne', {games: 0, oil: 0, meters: 0}); lns.gems ??= 0;
+const lns = gstore('lanterne', {games: 0, oil: 0, meters: 0}); lns.gems ??= 0; lns.lamp ??= 0; lns.music ??= true;
 // les zones, tous les 500 m : couleurs de la roche et dangers en plus
 const LN_ZONES = [{name: 'La grotte', rock: ['#4a3428', '#6a4a34', '#8a6444', '#3a2620'], bg: '#2a1c2e', bg2: '#33223a', fleck: '#5ec8ff'},
   {name: 'La mine de cristal', rock: ['#3a3050', '#54487a', '#7a6aa8', '#2a2440'], bg: '#1e1a30', bg2: '#28224a', fleck: '#ff5ad9'},
   {name: 'Le lac souterrain', rock: ['#24384a', '#34506a', '#4a7090', '#1a2838'], bg: '#14202c', bg2: '#1c2c3c', fleck: '#7fe0ee'},
   {name: 'Le cœur de lave', rock: ['#4a2018', '#6a3020', '#a04a24', '#3a140e'], bg: '#2a1210', bg2: '#3a1814', fleck: '#ffa030'}];
 const lnZone = d => LN_ZONES[Math.floor(d / 5000) % LN_ZONES.length];
+// les lanternes : plus d'huile (max), elle brûle moins vite (burn), l'éclat porte plus loin (range) et coûte moins (cost) ; débloquées par les cristaux ramassés en tout
+const LN_LAMPS = [{name: 'Lanterne de cuivre', need: 0, max: 92, burn: 1, range: 95, cost: 18, col: '#a0603a', glow: '#ffd84a'},
+  {name: 'Lanterne de verre', need: 120, max: 108, burn: .9, range: 100, cost: 18, col: '#7fe0ee', glow: '#e8fbff'},
+  {name: 'Lanterne-phare', need: 350, max: 100, burn: .95, range: 140, cost: 13, col: '#e8e4ec', glow: '#fff4c0'},
+  {name: 'Lanterne d\'or', need: 800, max: 122, burn: .8, range: 130, cost: 14, col: '#ffd84a', glow: '#ffffff'}];
+const lnLamp = () => LN_LAMPS[lns.lamp] || LN_LAMPS[0];
 let ln = null;
 const lnCanvas = (w, h, fn) => { const c = el('canvas'); c.width = w; c.height = h; fn(c.getContext('2d')); return c; };
 const hash = n => { n = Math.imul(n ^ n >>> 15, 0x2c1b3c6d); n = Math.imul(n ^ n >>> 12, 0x297a2d39); return ((n ^ n >>> 15) >>> 0) / 4294967296; };
@@ -344,14 +355,17 @@ function lnCave(xw) {  // haut et bas de la grotte à la distance xw ; elle se r
   const spike = Math.max(0, Math.min(bot - top - 46, hash(Math.floor(xw / 6) * 7 + 3) < .06 ? 10 + hash(Math.floor(xw / 6)) * 14 : 0));  // une pointe laisse toujours 46 px  // stalactites et stalagmites, 6 px de large
   return [top + (Math.floor(xw / 6) % 2 ? spike * (1 - Math.abs(xw % 6 - 3) / 3) : 0), bot - (Math.floor(xw / 6) % 2 ? 0 : spike * (1 - Math.abs(xw % 6 - 3) / 3))];
 }
-const LN_GIRL = [['...kkkk....', '..kccccck..', '.kcsssscck.', '.kcsksksck.', '.kcssssck..', '..kkcckkk..', '.kccccccck.', 'kcccccccck.', 'kccccccccck', '.kcccccccck', '..kpk..kpk.', '..kkk..kkk.'],
-  ['...kkkk....', '..kccccck..', '.kcsssscck.', '.kcsksksck.', '.kcssssck..', '..kkcckkk..', '.kccccccck.', '.kccccccccK', 'kccccccccck', 'kcccccccck.', '..kpk.kpk..', '..kkk.kkk..']];
-const LN_PAL = {k: '#120a04', c: '#6a3a9a', K: '#120a04', s: '#ffd0a8', p: '#3a2614'};
-const LN_SPR = {girl: LN_GIRL.map(r => lnCanvas(11, 12, g => sprite(g, r, 0, 0, LN_PAL))),
+const LN_GIRL = [['....kkkk.....', '...kHHHck....', '..kHccccck...', '..kHcssskk...', '..kccsesk....', '..kccsssk....', '...kkcckkkk..', '..kcdddaaask.', '.kccdddddkk..', '.kcddddddk...', 'kccdddDddk...', '.kkdDDDDk....', '...kbk.kbk...', '...kk..kk....'],
+  ['....kkkk.....', '...kHHHck....', '..kHccccck...', '..kHcssskk...', '..kccsesk....', '..kccsssk....', '...kkcckkkk..', '..kcdddaaask.', '.kccdddddkk..', 'kccddddddk...', 'kcdddddDdk...', '.kkdDDDDk....', '..kbk..kbk...', '..kk...kk....']];
+const LN_PAL = {k: '#120a04', H: '#9a6ac8', c: '#6a3a9a', s: '#ffd0a8', e: '#120a04', d: '#c8503a', D: '#8a2a20', a: '#6a3a9a', b: '#3a2614'};
+const LN_SPR = {girl: LN_GIRL.map(r => lnCanvas(13, 14, g => sprite(g, r, 0, 0, LN_PAL))),
   oil: lnCanvas(7, 9, g => sprite(g, ['..kkk..', '..kwk..', '.kkkkk.', 'kgyyygk', 'kgyyygk', 'kgoooyk', 'kgoooyk', '.kkkkk.', '.......'], 0, 0, {k: '#120a04', w: '#c8a880', y: '#ffd84a', o: '#ffa030', g: '#fff4c0'})),
   gem: lnCanvas(5, 7, g => sprite(g, ['..k..', '.kck.', 'kcwck', 'kccck', 'kcbck', '.kbk.', '..k..'], 0, 0, {k: '#0a1a2a', c: '#5ec8ff', w: '#e8fbff', b: '#2a88c8'})),
   fall: lnCanvas(7, 12, g => sprite(g, ['kkkkkkk', 'kaaaaak', 'kaaaabk', '.kaaak.', '.kaabk.', '.kaak..', '..kak..', '..kak..', '..kk...', '...k...', '.......', '.......'], 0, 0, {k: '#120a04', a: '#8a7a6a', b: '#c8b8a0'})),
   fire: lnCanvas(12, 12, g => sprite(g, ['.....r......', '....ryr.....', '...ryyr..r..', '...ryyyr.ry.', '..ryywyrryr.', '..ryywwyyyr.', '.rryywwyyrr.', '..rryyyyrr..', '.kbbkbbkbbk.', 'kbbkbbkbbkbk', '.kkkkkkkkkk.', '............'], 0, 0, {r: '#ff5a2a', y: '#ffd84a', w: '#fff4c0', k: '#120a04', b: '#6a4a34'})),
+  spider: [['.k...k.', 'k.kkk.k', '.kkrkk.', 'kkkkkkk', 'k.k.k.k', '.k...k.'], ['k.....k', '.kkkkk.', 'kkkrkkk', '.kkkkk.', '.k.k.k.', 'k.....k']].map(r => lnCanvas(7, 6, g => sprite(g, r, 0, 0, {k: '#1a1020', r: '#ff4a5a'}))),
+  fish: lnCanvas(10, 6, g => sprite(g, ['..kkkk....', '.kbbbbkk.k', 'kbwkbbbbkk', 'kbbbbbbbkk', '.kddddkk.k', '..kkkk....'], 0, 0, {k: '#0a1a2a', b: '#34a0c8', d: '#1a5a7a', w: '#e8fbff'})),
+  wisp: [['..ooo..', '.oyyyo.', 'oyywyyo', 'oyyyyyo', '.oyyyo.', '..o.o..', '.o...o.'], ['..ooo..', '.oyyyo.', 'oyywyyo', 'oyyyyyo', '.oyyyo.', '.o.o...', '...o.o.']].map(r => lnCanvas(7, 7, g => sprite(g, r, 0, 0, {o: '#ff5a2a', y: '#ffa030', w: '#fff4c0'}))),
   bat: [['k.......k', 'kk.kkk.kk', 'kkkkrkkkk', '.kkkkkkk.', '...k.k...'], ['...kkk...', '..kkrkk..', '.kkkkkkk.', 'kk.....kk', 'k.......k']].map(r => lnCanvas(9, 5, g => sprite(g, r, 0, 0, {k: '#1a1020', r: '#ff4a5a'})))};
 const lnMasks = new Map();
 function lnMask(r) {  // le noir, troué autour de la lanterne : bord tramé sur 8 pixels (deux paliers), mis en cache par rayon
@@ -368,15 +382,38 @@ function lnMask(r) {  // le noir, troué autour de la lanterne : bord tramé sur
   });
   lnMasks.set(r, c); return c;
 }
-function lnNew() { ln = Object.assign(ln || {tick: 0, raf: 0}, {seen: ln ? ln.tick : 0, mode: 'ready', y: LN.H / 2, vy: 0, d: 0, light: 70, items: [], bats: [], next: 120, nbat: 400, up: false, record: false, dead: 0, got: 0,
+function lnNew() { ln = Object.assign(ln || {tick: 0, raf: 0}, {seen: ln ? ln.tick : 0, mode: 'ready', y: LN.H / 2, vy: 0, d: 0, light: Math.round(lnLamp().max * .76), foes: [], nfoe: 240, items: [], bats: [], next: 120, nbat: 400, up: false, record: false, dead: 0, got: 0,
   gems: [], gem: 0, ngem: 200, falls: [], nfall: 300, drips: [], ndrip: 200, fires: [], nextFire: 10000, flash: 0, zone: 0, banner: 0, fireMsg: 0}); }
 function lnFlare() {  // l'éclat : 18 d'huile, la lumière s'agrandit d'un coup et les chauves-souris proches s'enfuient
-  if (!ln || ln.mode !== 'play' || ln.light < LN.LMIN + 24) return lnBeep(140, .1, 'square');
-  ln.light -= 18; ln.flash = 16; lnBeep(260, .35, 'square', 1040);
-  ln.bats = ln.bats.filter(b => Math.hypot(b.x - LN.PX, b.y - ln.y) > 95);
+  const L = lnLamp(); if (!ln || ln.mode !== 'play' || ln.light < LN.LMIN + L.cost + 6) return lnBeep(140, .1, 'square');
+  ln.light -= L.cost; ln.flash = 16; lnBeep(260, .35, 'square', 1040);
+  ln.bats = ln.bats.filter(b => Math.hypot(b.x - LN.PX, b.y - ln.y) > L.range); ln.foes = ln.foes.filter(f => Math.hypot(f.x - LN.PX, f.y - ln.y) > L.range);
 }
-let lnac = null;
-function lnBeep(f, d, type = 'triangle', slide = 0) { try { lnac ??= new AudioContext(); const o = lnac.createOscillator(), g = lnac.createGain(), t = lnac.currentTime; o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d); g.gain.setValueAtTime(.06, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(g).connect(lnac.destination); o.start(t); o.stop(t + d + .02); } catch {} }
+let lnac = null, lnMute = false;
+function lnBeep(f, d, type = 'triangle', slide = 0) { try { lnac ??= new AudioContext(); if (lnMute) return; const o = lnac.createOscillator(), g = lnac.createGain(), t = lnac.currentTime; o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d); g.gain.setValueAtTime(.06, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(g).connect(lnac.destination); o.start(t); o.stop(t + d + .02); } catch {} }
+const LN_MUSIC = [{root: 110, scale: [0, 3, 5, 7, 10, 12, 15], beat: .52, type: 'triangle', drone: 'sine', vol: .022},   // la grotte : pentatonique mineure, lente
+  {root: 220, scale: [0, 2, 4, 6, 7, 9, 11, 12, 14], beat: .38, type: 'sine', drone: 'triangle', vol: .02, echo: true},       // la mine de cristal : lydien, aigu, avec écho
+  {root: 98, scale: [0, 2, 3, 5, 7, 9, 10, 12], beat: .66, type: 'sine', drone: 'sine', vol: .026, long: true},                 // le lac : dorien, notes longues
+  {root: 82, scale: [0, 1, 3, 5, 7, 8, 10, 12], beat: .3, type: 'square', drone: 'sawtooth', vol: .012, pulse: true}];          // la lave : phrygien, grave et pressé
+const lnMus = {on: false, zone: -1, next: 0, notes: 0, drone: null, dg: null,
+  note(f, d, type, vol, at) { const o = lnac.createOscillator(), g = lnac.createGain(); o.type = type; o.frequency.value = f; g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(vol, at + .03); g.gain.exponentialRampToValueAtTime(.0001, at + d); o.connect(g).connect(lnac.destination); o.start(at); o.stop(at + d + .05); this.notes++; },
+  tick() {
+    const want = lns.music && ln?.mode === 'play' && view.classList.contains('on');
+    try { if (want) lnac ??= new AudioContext(); if (!lnac) return; } catch { return; }
+    const t = lnac.currentTime, zk = Math.floor((ln?.d || 0) / 5000) % LN_MUSIC.length, M = LN_MUSIC[zk];
+    if (!want) { if (this.on) { this.dg.gain.setTargetAtTime(0, t, .3); this.drone.stop(t + 1.5); this.on = false; this.drone = null; } return; }
+    if (!this.on || this.zone !== zk) {  // la zone change : le bourdon glisse vers la nouvelle note, de nouvelles notes suivent
+      if (!this.on) { this.drone = lnac.createOscillator(); this.dg = lnac.createGain(); this.dg.gain.value = 0; this.drone.connect(this.dg).connect(lnac.destination); this.drone.start(); this.next = t + .2; }
+      this.drone.type = M.drone; this.drone.frequency.setTargetAtTime(M.root / 2, t, .4); this.dg.gain.setTargetAtTime(M.vol * .7, t, .6); this.on = true; this.zone = zk;
+    }
+    while (this.next < t + .25) {
+      const at = Math.max(this.next, t), r = Math.random();
+      if (r < .62) { const s = M.scale[Math.floor(Math.random() * M.scale.length)], f = M.root * 2 * 2 ** (s / 12), d = M.long ? M.beat * 3 : M.beat * 1.4; this.note(f, d, M.type, M.vol, at); if (M.echo) this.note(f * 2, d, 'sine', M.vol * .35, at + M.beat * .5); }
+      if (M.pulse && Math.floor(at / M.beat) % 2 === 0) this.note(M.root, M.beat * .8, 'triangle', M.vol * 1.6, at);
+      this.next = at + M.beat;
+    }
+  }};
+setInterval(() => lnMus.tick(), 100);
 function lnPress(down) {
   ln.up = down; if (!down) return;
   if (ln.mode === 'ready') { ln.mode = 'play'; lns.games++; saveGames(); }
@@ -390,12 +427,12 @@ function lnUpdate() {
   const sp = 1.3 + Math.min(1.3, ln.d / 9000); ln.d += sp;
   const want = ln.up ? -1 : 1, acc = ln.vy * want < 0 ? .45 : .15;  // à contre-sens on freine fort : relâcher ne fait plus filer la lanterne
   ln.vy = Math.max(-2.1, Math.min(2.1, ln.vy + want * acc)); ln.y += ln.vy;
-  ln.light -= .038 + Math.min(.035, ln.d / 70000);
+  ln.light -= (.038 + Math.min(.035, ln.d / 70000)) * lnLamp().burn;
   if (ln.light <= LN.LMIN) return lnDie('La flamme s\'est éteinte');
   // fioles d'huile au milieu de la grotte, chauves-souris qui ondulent
   if (--ln.next <= 0) { const xw = ln.d + LN.W + 10, [t, b] = lnCave(xw); ln.items.push({x: LN.W + 10, y: t + 14 + Math.random() * (b - t - 28)}); ln.next = 170 + Math.random() * 120; }
   if (ln.d > 1500 && --ln.nbat <= 0) { const [t, b] = lnCave(ln.d + LN.W + 10); ln.bats.push({x: LN.W + 10, y0: (t + b) / 2, a: Math.random() * 6, amp: Math.min(30, (b - t) / 2 - 12)}); ln.nbat = Math.max(120, 420 - ln.d / 60) * (.7 + Math.random() * .6); }
-  for (const it of ln.items) { it.x -= sp; if (Math.abs(it.x - LN.PX) < 8 && Math.abs(it.y - ln.y) < 10) { it.got = true; ln.got++; ln.light = Math.min(LN.LMAX, ln.light + 26); lnBeep(660, .2, 'triangle', 1320); } }
+  for (const it of ln.items) { it.x -= sp; if (Math.abs(it.x - LN.PX) < 8 && Math.abs(it.y - ln.y) < 10) { it.got = true; ln.got++; ln.light = Math.min(lnLamp().max, ln.light + 26); lnBeep(660, .2, 'triangle', 1320); } }
   for (const bt of ln.bats) { bt.x -= sp + .5; bt.a += .06; bt.y = bt.y0 + Math.sin(bt.a) * bt.amp; if (Math.abs(bt.x - LN.PX) < 8 && Math.abs(bt.y - ln.y) < 7) return lnDie('Une chauve-souris !'); }
   // la zone (tous les 500 m), les cristaux, les stalactites qui tombent, les gouttes, le feu de camp tous les 1000 m
   const z = Math.floor(ln.d / 5000); if (z !== ln.zone) { ln.zone = z; ln.banner = 150; lnBeep(330, .4, 'triangle', 660); }
@@ -417,7 +454,20 @@ function lnUpdate() {
     if (Math.abs(d.x - LN.PX) < 5 && Math.abs(d.y - ln.y) < 7) { d.gone = true; ln.light = Math.max(LN.LMIN + 1, ln.light - (zk === 3 ? 6 : 10)); lnBeep(900, .15, 'sawtooth', 300); }
     if (d.y > lnCave(ln.d + d.x)[1]) d.gone = true;
   }
-  for (const f of ln.fires) { f.x -= sp; if (!f.used && f.x <= LN.PX) { f.used = true; ln.light = LN.LMAX; ln.fireMsg = 120; lnBeep(523, .15); lnBeep(784, .35); } }
+  // les créatures des zones profondes : araignées de la mine (elles descendent au bout de leur fil), poissons du lac (ils sautent), feux follets de la lave (ils te suivent)
+  if (zk >= 1 && --ln.nfoe <= 0) {
+    const x = LN.W + 10, [t, b] = lnCave(ln.d + x), kind = zk === 1 ? 'spider' : zk === 2 ? 'fish' : 'wisp';
+    ln.foes.push(kind === 'spider' ? {kind, x, top: t, y: t + 4, len: 0, max: Math.max(10, (b - t) * (.35 + Math.random() * .3)), a: Math.random() * 6} : kind === 'fish' ? {kind, x, y: b + 6, vy: 0, jumped: false, floor: b} : {kind, x, y: (t + b) / 2, a: 0});
+    ln.nfoe = (kind === 'wisp' ? 260 : 200) + Math.random() * 160 - Math.min(80, ln.d / 400);
+  }
+  for (const f of ln.foes) {
+    if (f.kind === 'spider') { f.x -= sp; f.a += .05; f.len = Math.min(f.max, f.len + .9); f.y = f.top + 4 + f.len + Math.sin(f.a) * 5; }
+    else if (f.kind === 'fish') { f.x -= sp; if (!f.jumped && f.x - LN.PX < 70 + Math.random() * 30) { f.jumped = true; f.vy = -3.6 - Math.random() * 1.1; lnBeep(500, .12, 'sine', 900); } if (f.jumped) { f.vy += .1; f.y += f.vy; if (f.vy > 0 && f.y > f.floor + 8) f.gone = true; } }
+    else { f.x -= sp * .55; f.a += .12; f.y += Math.max(-.45, Math.min(.45, (ln.y - f.y) * .03)) + Math.sin(f.a) * .4; }
+    if (Math.abs(f.x - LN.PX) < 7 && Math.abs(f.y - ln.y) < 7) return lnDie(f.kind === 'spider' ? 'Une araignée !' : f.kind === 'fish' ? 'Un poisson des profondeurs !' : 'Un feu follet !');
+  }
+  ln.foes = ln.foes.filter(f => !f.gone && f.x > -12);
+  for (const f of ln.fires) { f.x -= sp; if (!f.used && f.x <= LN.PX) { f.used = true; ln.light = lnLamp().max; ln.fireMsg = 120; lnBeep(523, .15); lnBeep(784, .35); } }
   ln.gems = ln.gems.filter(g => !g.got && g.x > -10); ln.falls = ln.falls.filter(f => !f.gone && f.x > -10); ln.drips = ln.drips.filter(d => !d.gone && d.x > -10); ln.fires = ln.fires.filter(f => f.x > -20);
   ln.items = ln.items.filter(i => !i.got && i.x > -10); ln.bats = ln.bats.filter(b => b.x > -10);
   for (let dx = -4; dx <= 4; dx += 4) { const [t, b] = lnCave(ln.d + LN.PX + dx); if (ln.y - 4 < t || ln.y + 4 > b) return lnDie('Contre la roche'); }
@@ -442,9 +492,15 @@ function lnDraw() {
   for (const d of ln.drips) { px(g, '#7fe0ee', d.x, d.y, 1, 2); px(g, '#e8fbff', d.x, d.y, 1, 1); }
   for (const it of ln.items) g.drawImage(LN_SPR.oil, Math.round(it.x - 3), Math.round(it.y - 4 + Math.sin(ln.tick / 10 + it.x) * 1.5));
   for (const bt of ln.bats) g.drawImage(LN_SPR.bat[Math.floor(ln.tick / 6) % 2], Math.round(bt.x - 4), Math.round(bt.y - 2));
-  const f = Math.floor(ln.tick / 10) % 2; g.drawImage(LN_SPR.girl[f], LN.PX - 6, Math.round(ln.y - 6));
-  // la lanterne au bout du bras, flamme qui tremble
-  const lx = LN.PX + 6, ly = Math.round(ln.y) - 1; px(g, '#120a04', lx, ly - 1, 5, 7); px(g, '#ffd84a', lx + 1, ly, 3, 5); px(g, ln.tick % 8 < 4 ? '#ff8a2a' : '#fff4c0', lx + 2, ly + 1, 1, 3);
+  for (const f of ln.foes) {
+    if (f.kind === 'spider') { px(g, '#c8c0d8', Math.round(f.x), Math.round(f.top), 1, Math.round(f.y - f.top - 2)); g.drawImage(LN_SPR.spider[Math.floor(ln.tick / 8) % 2], Math.round(f.x - 3), Math.round(f.y - 3)); }
+    else if (f.kind === 'fish') { if (f.jumped) { g.save(); g.translate(Math.round(f.x), Math.round(f.y)); if (f.vy > 0) g.scale(1, -1); g.drawImage(LN_SPR.fish, -5, -3); g.restore(); } else if (ln.tick % 30 < 6) px(g, '#7fe0ee', f.x - 2, f.floor - 1, 4, 1); }  // des ronds dans l'eau avant le saut
+    else g.drawImage(LN_SPR.wisp[Math.floor(ln.tick / 7) % 2], Math.round(f.x - 3), Math.round(f.y - 3));
+  }
+  const f = Math.floor(ln.tick / (ln.up ? 5 : 10)) % 2, gy = Math.round(ln.y - 7); g.drawImage(LN_SPR.girl[f], LN.PX - 6, gy);
+  // la lanterne pend à sa main (au bout du bras tendu), elle se balance un peu ; la flamme tremble
+  const L = lnLamp(), sw = Math.round(Math.sin(ln.tick / 9) * 1 - ln.vy * .5), lx = LN.PX + 3 + sw, ly = gy + 10; px(g, '#120a04', LN.PX + 5, gy + 8, 1, 2); px(g, '#120a04', lx + 2, ly - 2, 1, 1);
+  px(g, '#120a04', lx, ly - 1, 5, 7); px(g, L.col, lx, ly - 1, 5, 1); px(g, L.col, lx, ly + 5, 5, 1); px(g, ln.light > 30 ? L.glow : '#ffa030', lx + 1, ly, 3, 5); px(g, ln.tick % 8 < 4 ? '#ff8a2a' : '#fff4c0', lx + 2, ly + 1, 1, 3);
   // l'obscurité : un masque troué centré sur la lanterne, rayon = la flamme (qui tremble un peu)
   const r = Math.min(150, ln.light + Math.sin(ln.tick / 5) * 1.5 + ln.flash * 5); g.drawImage(lnMask(r), Math.round(lx + 2 - W), Math.round(ly + 2 - H));
   if (ln.flash > 10) { g.fillStyle = 'rgba(255,244,192,.25)'; g.fillRect(0, 0, W, H); }
@@ -452,8 +508,9 @@ function lnDraw() {
   for (const f of ln.fires) { const [, b] = lnCave(ln.d + f.x); if (!f.used) { px(g, '#ffa030', f.x - 1, b - 9, 2, 2); px(g, '#ffd84a', f.x, b - 8 - ln.tick % 3, 1, 1); } }
   for (const it of ln.items) if (Math.floor(ln.tick / 12 + it.x) % 3 === 0) px(g, '#ffd84a', it.x, it.y - 2, 1, 1);  // les fioles scintillent dans le noir
   for (const bt of ln.bats) px(g, '#ff4a5a', bt.x, bt.y - 1, 1, 1);
+  for (const f of ln.foes) { if (f.kind === 'spider') px(g, '#ff4a5a', f.x, f.y - 1, 1, 1); else if (f.kind === 'fish' && f.jumped) px(g, '#e8fbff', f.x - 3, f.y - 1, 1, 1); else if (f.kind === 'wisp') { px(g, '#ffa030', f.x - 1, f.y - 1, 3, 3); px(g, '#fff4c0', f.x, f.y, 1, 1); } }  // leurs yeux et le feu follet se voient dans le noir
   // jauge d'huile et distance
-  px(g, '#120a04', 6, 6, 62, 8); px(g, '#3a2614', 7, 7, 60, 6); const k = Math.max(0, (ln.light - LN.LMIN) / (LN.LMAX - LN.LMIN)); px(g, k < .25 && ln.tick % 20 < 10 ? '#ff5a4a' : '#ffa030', 7, 7, Math.round(60 * k), 6); px(g, '#ffd84a', 7, 7, Math.round(60 * k), 2);
+  px(g, '#120a04', 6, 6, 62, 8); px(g, '#3a2614', 7, 7, 60, 6); const k = Math.max(0, (ln.light - LN.LMIN) / (lnLamp().max - LN.LMIN)); px(g, k < .25 && ln.tick % 20 < 10 ? '#ff5a4a' : '#ffa030', 7, 7, Math.round(60 * k), 6); px(g, '#ffd84a', 7, 7, Math.round(60 * k), 2);
   pxFont(g, Math.floor(ln.d / 10) + ' m', W - 6, 14, '#fff4e0', 12, 'right');
   g.drawImage(LN_SPR.gem, 74, 7); pxFont(g, String(ln.gem), 82, 14, '#5ec8ff', 8);
   if (ln.banner && ln.mode === 'play') pxFont(g, Z.name.toUpperCase(), W / 2, 34, Z.fleck, 12, 'center');
@@ -463,6 +520,7 @@ function lnDraw() {
   if (ln.mode === 'over' && ln.dead > 25) gameText(g, W, [[ln.why, '#ff5a4a', 12], [Math.floor(ln.d / 10) + ' m · ' + ln.got + ' fioles · ' + ln.gem + ' cristaux', '#ffffff'], [ln.record ? 'NOUVEAU RECORD !' : 'Record ' + (games.best.lanterne || 0) + ' m', '#ffd84a'], [ln.dead > 40 ? 'Espace pour repartir' : '', '#c8a880']], 84);
 }
 function lnInfo() {
+  lnLamps();
   $('lnStats').replaceChildren(...[['Plus loin', (games.best.lanterne || 0) + ' m'], ['Parties', lns.games], ['Fioles ramassées', lns.oil], ['Cristaux', lns.gems], ['Distance totale', lns.meters + ' m']].flatMap(([a, b]) => [el('span', '', a), el('b', '', String(b))]));
 }
 const lnKey = k => k === ' ' || k === 'ArrowUp' || k === 'Enter' || k === 'w' || k === 'z';
@@ -477,19 +535,39 @@ document.addEventListener('keyup', e => { if (ln && lnKey(e.key)) lnPress(false)
 $('lnCanvas').onpointerdown = e => { e.preventDefault(); if (ln && e.button !== 2) lnPress(true); };
 document.addEventListener('pointerup', () => { if (ln) ln.up = false; });
 $('lnNew').onclick = () => { lnNew(); $('lnNew').blur(); };
-{  // vérification : la grotte est la même à chaque passage, laisse toujours au moins 40 px, l'huile s'épuise et tue
-  const keep = ln, realBest = games.best.lanterne, realStats = {...lns}; ln = null;
+$('gFs').onclick = () => { const box = $('lnCanvas').parentElement; document.fullscreenElement ? document.exitFullscreen() : box.requestFullscreen?.().catch(() => {}); $('gFs').blur(); };
+const lnMusBtn = () => { $('lnMus').textContent = 'MUSIQUE : ' + (lns.music ? 'OUI' : 'NON'); };
+$('lnMus').onclick = () => { lns.music = !lns.music; saveGames(); lnMusBtn(); $('lnMus').blur(); }; lnMusBtn();
+function lnLamps() {
+  $('lnLamps').replaceChildren(...LN_LAMPS.map((L, i) => { const ok = lns.gems >= L.need, b = el('button', 'btn' + (i === (lns.lamp || 0) ? ' main' : ''), L.name + (ok ? '' : ' · ' + L.need + ' cristaux'));
+    b.disabled = !ok; b.title = 'Huile ' + L.max + ' · éclat ' + L.range + ' px pour ' + L.cost + ' d\'huile' + (L.burn < 1 ? ' · brûle ' + Math.round((1 - L.burn) * 100) + ' % moins vite' : '');
+    b.onclick = () => { if (!ok || ln?.mode === 'play') return; lns.lamp = i; saveGames(); lnLamps(); if (ln?.mode !== 'play') ln.light = Math.round(L.max * .76); b.blur(); }; return b; }));
+}
+function lnCheck() {  // vérification : la grotte est la même à chaque passage, laisse toujours au moins 40 px, l'huile s'épuise et tue ; l'éclat chasse ; créatures ; lanternes
+  const keep = ln, realBest = games.best.lanterne, realStats = {...lns}; ln = null; lnMute = true; const bad = [];
   let minGap = 999; for (let x = 0; x < 60000; x += 3) { const [t, b] = lnCave(x); minGap = Math.min(minGap, b - t); }
   const same = lnCave(1234)[0] === lnCave(1234)[0];
   lnNew(); ln.mode = 'play'; ln.light = LN.LMIN + .01; ln.next = ln.nbat = 1e9; lnUpdate(); const dark = ln.mode === 'over';
   lnNew(); ln.mode = 'play'; ln.next = ln.nbat = ln.ngem = 1e9; ln.light = 60; ln.bats = [{x: LN.PX + 30, y0: ln.y, a: 0, amp: 0, y: ln.y}]; lnFlare(); const scared = !ln.bats.length && ln.light === 42;
   lnNew(); ln.mode = 'play'; ln.next = ln.nbat = ln.ngem = 1e9; ln.vy = -2.1; ln.up = false; const y0 = ln.y; let ymin = y0; for (let i = 0; i < 30 && ln.vy < 0; i++) { lnUpdate(); ymin = Math.min(ymin, ln.y); } const drift = y0 - ymin;
-  console.assert(minGap >= 40 && same && dark && scared && drift < 10, 'lanterne', {minGap, same, dark, scared, drift});
+  if (!(minGap >= 40 && same && dark && scared && drift < 10)) bad.push(JSON.stringify({minGap, same, dark, scared, drift}));
+  for (const [zk, kind, msg] of [[1, 'spider', 'araignée'], [2, 'fish', 'poisson'], [3, 'wisp', 'feu follet']]) {  // chaque zone profonde a sa créature, qui tue au contact
+    lnNew(); ln.mode = 'play'; ln.d = zk * 5000 + 100; ln.zone = zk; ln.light = 80; ln.next = ln.nbat = ln.ngem = ln.nfall = ln.ndrip = 1e9; ln.nextFire = 1e9; ln.nfoe = 1; const mid = () => { const [t, b] = lnCave(ln.d + LN.PX); ln.y = (t + b) / 2; ln.vy = 0; }; mid(); lnUpdate(); mid();
+    if (ln.foes[0]?.kind !== kind) { bad.push('créature ' + kind); continue; }
+    ln.foes = [{kind, x: LN.PX, y: ln.y, top: 0, len: 0, max: 0, a: 0, floor: 300, jumped: true, vy: 0}]; if (kind === 'spider') ln.foes[0].top = ln.y - 4; lnUpdate();
+    if (ln.mode !== 'over' || !ln.why.toLowerCase().includes(msg.split(' ')[0])) bad.push('contact ' + kind + ' ' + ln.mode);
+  }
+  lnNew(); ln.mode = 'play'; ln.d = 15100; ln.light = 80; ln.foes = [{kind: 'wisp', x: LN.PX + 40, y: ln.y, a: 0}]; lns.lamp = 2; lnFlare(); if (ln.foes.length || ln.light !== 67) bad.push('éclat phare');
+  lns.lamp = 0; lnNew(); ln.mode = 'play'; ln.light = 92; ln.foes = [{kind: 'wisp', x: LN.PX + 120, y: ln.y, a: 0}]; lnFlare(); if (!ln.foes.length) bad.push('portée cuivre');
+  if (LN_LAMPS.some((L, i) => i && (L.need <= LN_LAMPS[i - 1].need || L.max < 92))) bad.push('lanternes');
   if (realBest === undefined) delete games.best.lanterne; else games.best.lanterne = realBest; Object.assign(lns, realStats);
-  ln = keep;
+  ln = keep; lnMute = false;
+  return bad.join(' | ') || 'ok';
 }
+{ const c = lnCheck(); console.assert(c === 'ok', 'lanterne', c); $('lnCanvas').__ln = {check: lnCheck, st: () => ln, lns, mus: lnMus, lamps: LN_LAMPS, info: () => lnInfo(), cave: lnCave, again: () => lnNew()}; }
 ctx.onOpen(() => {
   if (!ln || !ln.g) { lnNew(); ln.g = $('lnCanvas').getContext('2d'); }
+  if (ln.mode !== 'play') ln.light = Math.round(lnLamp().max * .76);
   gameLoop(ln, 'lanterne', lnUpdate, lnDraw); lnInfo();
 });
 }
