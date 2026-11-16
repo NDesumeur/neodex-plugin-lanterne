@@ -1,7 +1,7 @@
 {
   "id": "neodex.lanterne",
   "name": "Lanterne",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": "NDesumeur",
   "description": "Vol sans fin dans une grotte obscure : maintiens Espace ou le clic pour monter, relâche pour descendre. La flamme de la lanterne baisse sans arrêt ; ramasse les fioles d'huile, les cristaux et un feu de camp tous les 1000 m, évite la roche, les stalactites et les chauves-souris, que l'éclat de lumière fait fuir. Une nouvelle zone tous les 500 m, avec sa créature (araignées, poissons qui sautent, feux follets) et sa musique d'ambiance. Quatre lanternes à débloquer avec les cristaux (plus d'huile, éclat plus large). La voyageuse tient sa lanterne au bout du bras ; jeu à la taille de l'écran et plein écran.",
   "icon": "icon.png",
