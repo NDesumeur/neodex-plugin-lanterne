@@ -89,5 +89,15 @@
  "Une chauve-souris !": "A bat!",
  "Une stalactite est tombée": "A stalactite fell",
  "Vol sans fin dans une grotte obscure : maintiens Espace ou le clic pour monter, relâche pour descendre. La flamme de la lanterne baisse sans arrêt ; ramasse les fioles d'huile, les cristaux et un feu de camp tous les 1000 m, évite la roche, les stalactites et les chauves-souris, que l'éclat de lumière fait fuir. Une nouvelle zone tous les 500 m, avec sa créature (araignées, poissons qui sautent, feux follets) et sa musique d'ambiance. Quatre lanternes à débloquer avec les cristaux (plus d'huile, éclat plus large). La voyageuse tient sa lanterne au bout du bras ; jeu à la taille de l'écran et plein écran.": "An endless flight through a dark cave: hold Space or the mouse button to rise, release to fall. The lantern's flame keeps dimming; collect oil flasks, crystals and a campfire every 1000 m, avoid rock, stalactites and bats, which a burst of light scares away. A new zone every 500 m, with its creature (spiders, leaping fish, will-o'-the-wisps) and its ambient music. Four lanterns to unlock with crystals (more oil, wider flash). The traveller holds her lantern at arm's length; the game fits the screen and goes full screen.",
- "Éclat de lumière (X) : coûte de l'huile mais fait fuir les chauves-souris proches. Ramasse les cristaux. Tous les 500 m, une nouvelle zone avec sa musique : stalactites qui tombent et araignées dans la mine, gouttes et poissons qui sautent au lac, feux follets qui te suivent dans la lave…": "Light flash (X): costs oil but scares off nearby bats and creatures. Pick up the crystals. Every 500 m, a new zone with its music: falling stalactites and spiders in the mine, drips and leaping fish at the lake, will-o'-the-wisps that follow you in the lava…"
+ "Éclat de lumière (X) : coûte de l'huile mais fait fuir les chauves-souris proches. Ramasse les cristaux. Tous les 500 m, une nouvelle zone avec sa musique : stalactites qui tombent et araignées dans la mine, gouttes et poissons qui sautent au lac, feux follets qui te suivent dans la lave…": "Light flash (X): costs oil but scares off nearby bats and creatures. Pick up the crystals. Every 500 m, a new zone with its music: falling stalactites and spiders in the mine, drips and leaping fish at the lake, will-o'-the-wisps that follow you in the lava…",
+ "MUSIQUE : OUI": "MUSIC: ON",
+ "MUSIQUE :": "MUSIC:",
+ "Huile": "Oil",
+ "· éclat": "· glow",
+ "px pour": "px for",
+ "· brûle": "· burns",
+ "araignée": "spider",
+ "créature": "creature",
+ "éclat phare": "lighthouse glow",
+ "portée cuivre": "copper range"
 }
