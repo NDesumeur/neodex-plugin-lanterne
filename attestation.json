@@ -1,9 +1,9 @@
 {
   "pluginId": "neodex.lanterne",
   "repo": "NDesumeur/neodex-plugin-lanterne",
-  "version": "1.0.4",
-  "sha256": "6498e903c8d54a8a3c3dc27570c61869d60a41f4135e76e55fa14fe3ff32924f",
-  "approvedAt": "2026-11-08T12:10:48.297Z",
+  "version": "1.1.0",
+  "sha256": "c94c72b64efe023b6943b1a8bea87cb3f008e968b8b8c49a7330e2f7427c5aa2",
+  "approvedAt": "2026-11-16T04:14:36.814Z",
   "neobase": ">=4.0.0",
-  "signature": "v+mZ32kkLAJHotD7PyhAlB48f4jUr0GOgNu1oj1YN92L9M1gYVkDIcUCIqRkdR0r4zLXTZ6HAR+rIBHg/DtfCw=="
+  "signature": "8sgEBgzaDQjfLoGglT+YmduhVpG67HJTPfnMl32CigttyCfXOxIC+lAwJ4chHRlyKQe+3ugPcRe909E3bS3yBw=="
 }
