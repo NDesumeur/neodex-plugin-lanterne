@@ -77,7 +77,6 @@
  "RECORDS": "RECORDS",
  "Ramasse l'huile": "Collect the oil",
  "Record": "Record",
- "Record, niveau.": "Record, level.",
  "Shift": "Shift",
  "Ua": "Ua",
  "Uc": "Uc",
@@ -99,5 +98,6 @@
  "araignée": "spider",
  "créature": "creature",
  "éclat phare": "lighthouse glow",
- "portée cuivre": "copper range"
+ "portée cuivre": "copper range",
+ "Rien n'est synchronisé : tes records restent sur cet appareil.": "Nothing is synced: your records stay on this device."
 }
