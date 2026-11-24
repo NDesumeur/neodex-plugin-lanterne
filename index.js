@@ -8,6 +8,7 @@ const HTML = `<div class="appWrap wide">
       <div class="row"><button class="btn main" id="lnNew">NOUVELLE PARTIE</button><button class="btn" id="gFs">PLEIN ÉCRAN</button><button class="btn" id="lnMus">MUSIQUE : OUI</button></div>
       <div class="sysCard"><b>LANTERNES</b><div class="hint">Elles se débloquent avec les cristaux ramassés au fil des parties.</div><div class="lnLamps" id="lnLamps"></div></div>
       <div class="hint">La flamme baisse toute seule. Les fioles d'huile la ravivent ; elles scintillent un peu dans le noir. Un feu de camp tous les 1000 m remplit la lanterne.</div>
+      <div class="hint">Au-delà de 150 m, des ombres sortent du noir et viennent vers toi : elles fondent dans ta lumière, d'autant plus vite que la flamme est grande. Si une ombre t'atteint, elle vole de l'huile. Les braseros, au sol, s'allument quand tu passes tout près ou avec l'éclat de loin : allumés, ils éclairent la grotte autour d'eux et ravivent la flamme quand tu passes devant.</div>
       <div class="hint">Éclat de lumière (X) : coûte de l'huile mais fait fuir les chauves-souris proches. Ramasse les cristaux. Tous les 500 m, une nouvelle zone avec sa musique : stalactites qui tombent et araignées dans la mine, gouttes et poissons qui sautent au lac, feux follets qui te suivent dans la lave…</div>
     </div></div>
 </div>`;
@@ -332,7 +333,7 @@ const clock = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStar
 
 /* ---------- Lanterne : grotte générée colonne par colonne (toujours la même pour une distance donnée), obscurité = un masque troué ---------- */
 const LN = {W: 288, H: 216, PX: 70, LMAX: 92, LMIN: 10};
-const lns = gstore('lanterne', {games: 0, oil: 0, meters: 0}); lns.gems ??= 0; lns.lamp ??= 0; lns.music ??= true;
+const lns = gstore('lanterne', {games: 0, oil: 0, meters: 0}); lns.gems ??= 0; lns.lamp ??= 0; lns.music ??= true; lns.braz ??= 0;
 // les zones, tous les 500 m : couleurs de la roche et dangers en plus
 const LN_ZONES = [{name: 'La grotte', rock: ['#4a3428', '#6a4a34', '#8a6444', '#3a2620'], bg: '#2a1c2e', bg2: '#33223a', fleck: '#5ec8ff'},
   {name: 'La mine de cristal', rock: ['#3a3050', '#54487a', '#7a6aa8', '#2a2440'], bg: '#1e1a30', bg2: '#28224a', fleck: '#ff5ad9'},
@@ -383,11 +384,31 @@ function lnMask(r) {  // le noir, troué autour de la lanterne : bord tramé sur
   lnMasks.set(r, c); return c;
 }
 function lnNew() { ln = Object.assign(ln || {tick: 0, raf: 0}, {seen: ln ? ln.tick : 0, mode: 'ready', y: LN.H / 2, vy: 0, d: 0, light: Math.round(lnLamp().max * .76), foes: [], nfoe: 240, items: [], bats: [], next: 120, nbat: 400, up: false, record: false, dead: 0, got: 0,
-  gems: [], gem: 0, ngem: 200, falls: [], nfall: 300, drips: [], ndrip: 200, fires: [], nextFire: 10000, flash: 0, zone: 0, banner: 0, fireMsg: 0}); }
+  gems: [], gem: 0, ngem: 200, falls: [], nfall: 300, drips: [], ndrip: 200, fires: [], nextFire: 10000, flash: 0, zone: 0, banner: 0, fireMsg: 0, shades: [], nshade: 300, braz: [], nextBraz: 2500, lit: 0, stolen: 0, hurt: 0}); }
 function lnFlare() {  // l'éclat : 18 d'huile, la lumière s'agrandit d'un coup et les chauves-souris proches s'enfuient
   const L = lnLamp(); if (!ln || ln.mode !== 'play' || ln.light < LN.LMIN + L.cost + 6) return lnBeep(140, .1, 'square');
   ln.light -= L.cost; ln.flash = 16; lnBeep(260, .35, 'square', 1040);
-  ln.bats = ln.bats.filter(b => Math.hypot(b.x - LN.PX, b.y - ln.y) > L.range); ln.foes = ln.foes.filter(f => Math.hypot(f.x - LN.PX, f.y - ln.y) > L.range);
+  ln.bats = ln.bats.filter(b => Math.hypot(b.x - LN.PX, b.y - ln.y) > L.range); ln.foes = ln.foes.filter(f => Math.hypot(f.x - LN.PX, f.y - ln.y) > L.range); ln.shades = ln.shades.filter(s => Math.hypot(s.x - LN.PX, s.y - ln.y) > L.range);
+  for (const b of ln.braz) if (!b.lit && Math.hypot(b.x - LN.PX, lnCave(ln.d + b.x)[1] - 8 - ln.y) <= L.range + 30) lnLight(b);  // l'éclat porte jusqu'aux braseros
+}
+function lnLight(b) { b.lit = true; ln.lit++; lnBeep(392, .3, 'triangle', 784); }
+function lnShades(sp) {  // les ombres : elles viennent vers toi et fondent dans la lumière ; au contact, elles volent de l'huile
+  if (ln.d > 1500 && --ln.nshade <= 0) { const [t, b] = lnCave(ln.d + LN.W + 10); ln.shades.push({x: LN.W + 10, y: t + 10 + Math.random() * Math.max(1, b - t - 20), burn: 0, a: Math.random() * 6}); ln.nshade = Math.max(150, 420 - ln.d / 80) * (.7 + Math.random() * .6); }
+  const r = ln.light + ln.flash * 5;
+  for (const s of ln.shades) {
+    const dx = LN.PX - s.x, dy = ln.y - s.y, d = Math.hypot(dx, dy) || 1; s.a += .1;
+    s.x += -sp * .5 + dx / d * 1.1; s.y += dy / d * 1.1 + Math.sin(s.a) * .3;
+    if (d < r) { s.burn += r / 45; if (s.burn >= 60) { s.gone = true; continue; } }
+    if (d < 7) { s.gone = true; ln.light = Math.max(LN.LMIN + 1, ln.light - 16); ln.stolen++; ln.hurt = 20; lnBeep(180, .4, 'sawtooth', 70); }
+  }
+  ln.shades = ln.shades.filter(s => !s.gone && s.x > -12);
+  // les braseros, posés au sol tous les 250 à 400 m
+  if (ln.d + LN.W >= ln.nextBraz) { ln.braz.push({x: LN.W + (ln.nextBraz - ln.d - LN.W), lit: false, paid: false}); ln.nextBraz += 2500 + Math.floor(Math.random() * 1500); if (ln.nextBraz % 10000 < 400 || ln.nextBraz % 10000 > 9600) ln.nextBraz += 800; }
+  for (const b of ln.braz) { b.x -= sp; const fy = lnCave(ln.d + b.x)[1] - 8;
+    if (!b.lit && Math.abs(b.x - LN.PX) < 10 && Math.abs(fy - ln.y) < 36) lnLight(b);
+    if (b.lit && !b.paid && b.x <= LN.PX) { b.paid = true; ln.light = Math.min(lnLamp().max, ln.light + 10); lnBeep(660, .2, 'triangle', 990); } }
+  ln.braz = ln.braz.filter(b => b.x > -60);
+  if (ln.hurt) ln.hurt--;
 }
 let lnac = null, lnMute = false;
 function lnBeep(f, d, type = 'triangle', slide = 0) { try { lnac ??= new AudioContext(); if (lnMute) return; const o = lnac.createOscillator(), g = lnac.createGain(), t = lnac.currentTime; o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d); g.gain.setValueAtTime(.06, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(g).connect(lnac.destination); o.start(t); o.stop(t + d + .02); } catch {} }
@@ -420,7 +441,7 @@ function lnPress(down) {
   else if (ln.mode === 'pause') ln.mode = 'play';
   else if (ln.mode === 'over' && ln.dead > 40) { lnNew(); }
 }
-function lnDie(why) { ln.mode = 'over'; ln.dead = 0; ln.why = why; lnBeep(220, .7, 'sawtooth', 50); ln.record = best('lanterne', Math.floor(ln.d / 10)); lns.oil += ln.got; lns.gems += ln.gem; lns.meters += Math.floor(ln.d / 10); saveGames(); lnInfo(); }
+function lnDie(why) { lns.braz += ln.lit || 0; ln.mode = 'over'; ln.dead = 0; ln.why = why; lnBeep(220, .7, 'sawtooth', 50); ln.record = best('lanterne', Math.floor(ln.d / 10)); lns.oil += ln.got; lns.gems += ln.gem; lns.meters += Math.floor(ln.d / 10); saveGames(); lnInfo(); }
 function lnUpdate() {
   if (ln.mode === 'over') { ln.dead++; if (ln.light > 0) ln.light = Math.max(0, ln.light - 1.5); return; }
   if (ln.mode !== 'play') { ln.d += .4; return; }
@@ -467,6 +488,7 @@ function lnUpdate() {
     if (Math.abs(f.x - LN.PX) < 7 && Math.abs(f.y - ln.y) < 7) return lnDie(f.kind === 'spider' ? 'Une araignée !' : f.kind === 'fish' ? 'Un poisson des profondeurs !' : 'Un feu follet !');
   }
   ln.foes = ln.foes.filter(f => !f.gone && f.x > -12);
+  lnShades(sp);
   for (const f of ln.fires) { f.x -= sp; if (!f.used && f.x <= LN.PX) { f.used = true; ln.light = lnLamp().max; ln.fireMsg = 120; lnBeep(523, .15); lnBeep(784, .35); } }
   ln.gems = ln.gems.filter(g => !g.got && g.x > -10); ln.falls = ln.falls.filter(f => !f.gone && f.x > -10); ln.drips = ln.drips.filter(d => !d.gone && d.x > -10); ln.fires = ln.fires.filter(f => f.x > -20);
   ln.items = ln.items.filter(i => !i.got && i.x > -10); ln.bats = ln.bats.filter(b => b.x > -10);
@@ -487,6 +509,11 @@ function lnDraw() {
     if (sh > .97) px(g, Zx.fleck, x, b + 5, 2, 2);  // petits cristaux dans la roche
   }
   for (const f of ln.fires) { const [, b] = lnCave(ln.d + f.x); g.drawImage(LN_SPR.fire, Math.round(f.x - 6), Math.round(b - 11)); }
+  for (const b of ln.braz) { const fy = Math.round(lnCave(ln.d + b.x)[1]), x = Math.round(b.x);  // le brasero : un pied de pierre et sa coupe
+    px(g, '#120a04', x - 3, fy - 6, 7, 6); px(g, '#6a6070', x - 2, fy - 6, 5, 6); px(g, '#120a04', x - 6, fy - 9, 13, 4); px(g, '#8a8090', x - 5, fy - 9, 11, 2); px(g, '#4a4250', x - 5, fy - 7, 11, 1);
+    if (b.lit) { const t = ln.tick + x; px(g, '#ff5a2a', x - 4, fy - 12, 9, 3); px(g, '#ffa030', x - 3, fy - 14 - (t >> 2) % 2, 7, 3); px(g, '#ffd84a', x - 1, fy - 16 - (t >> 3) % 2, 3, 3); px(g, '#fff4c0', x, fy - 13, 1, 2); } }
+  for (const s of ln.shades) { const x = Math.round(s.x), y = Math.round(s.y), k = Math.max(0, 1 - s.burn / 60), w = Math.max(2, Math.round(9 * k));  // l'ombre : elle rétrécit en fondant
+    px(g, '#0a0614', x - w / 2, y - w / 2, w, w); px(g, '#1e1430', x - w / 2 + 1, y - w / 2 + 1, Math.max(1, w - 2), Math.max(1, w - 3)); }
   for (const gm of ln.gems) g.drawImage(LN_SPR.gem, Math.round(gm.x - 2), Math.round(gm.y - 3));
   for (const f of ln.falls) g.drawImage(LN_SPR.fall, Math.round(f.x - 3), Math.round(f.y));
   for (const d of ln.drips) { px(g, '#7fe0ee', d.x, d.y, 1, 2); px(g, '#e8fbff', d.x, d.y, 1, 1); }
@@ -502,7 +529,13 @@ function lnDraw() {
   const L = lnLamp(), sw = Math.round(Math.sin(ln.tick / 9) * 1 - ln.vy * .5), lx = LN.PX + 3 + sw, ly = gy + 10; px(g, '#120a04', LN.PX + 5, gy + 8, 1, 2); px(g, '#120a04', lx + 2, ly - 2, 1, 1);
   px(g, '#120a04', lx, ly - 1, 5, 7); px(g, L.col, lx, ly - 1, 5, 1); px(g, L.col, lx, ly + 5, 5, 1); px(g, ln.light > 30 ? L.glow : '#ffa030', lx + 1, ly, 3, 5); px(g, ln.tick % 8 < 4 ? '#ff8a2a' : '#fff4c0', lx + 2, ly + 1, 1, 3);
   // l'obscurité : un masque troué centré sur la lanterne, rayon = la flamme (qui tremble un peu)
-  const r = Math.min(150, ln.light + Math.sin(ln.tick / 5) * 1.5 + ln.flash * 5); g.drawImage(lnMask(r), Math.round(lx + 2 - W), Math.round(ly + 2 - H));
+  const r = Math.min(150, ln.light + Math.sin(ln.tick / 5) * 1.5 + ln.flash * 5), dk = ln.dk ??= lnCanvas(W, H, () => {}), dg = dk.getContext('2d');
+  dg.clearRect(0, 0, W, H); dg.drawImage(lnMask(r), Math.round(lx + 2 - W), Math.round(ly + 2 - H)); dg.globalCompositeOperation = 'destination-out';
+  for (const b of ln.braz) if (b.lit) { const cy = lnCave(ln.d + b.x)[1] - 12, R = 42 + Math.sin(ln.tick / 4 + b.x) * 2, gr = dg.createRadialGradient(b.x, cy, R * .45, b.x, cy, R); gr.addColorStop(0, '#000'); gr.addColorStop(1, 'rgba(0,0,0,0)'); dg.fillStyle = gr; dg.fillRect(b.x - R, cy - R, 2 * R, 2 * R); }
+  dg.globalCompositeOperation = 'source-over'; g.drawImage(dk, 0, 0);
+  if (ln.hurt) { g.fillStyle = 'rgba(40,0,60,' + (ln.hurt / 50).toFixed(2) + ')'; g.fillRect(0, 0, W, H); }
+  for (const b of ln.braz) if (!b.lit && (ln.tick >> 4) % 2) px(g, '#ff5a2a', b.x, lnCave(ln.d + b.x)[1] - 9, 1, 1);  // une braise dans le noir
+  for (const s of ln.shades) if (s.burn < 40) { px(g, '#e8e0ff', s.x - 2, s.y - 1, 1, 1); px(g, '#e8e0ff', s.x + 1, s.y - 1, 1, 1); }  // les yeux des ombres
   if (ln.flash > 10) { g.fillStyle = 'rgba(255,244,192,.25)'; g.fillRect(0, 0, W, H); }
   for (const gm of ln.gems) if (Math.floor(ln.tick / 9 + gm.x) % 4 === 0) px(g, '#e8fbff', gm.x, gm.y, 1, 1);  // les cristaux brillent dans le noir
   for (const f of ln.fires) { const [, b] = lnCave(ln.d + f.x); if (!f.used) { px(g, '#ffa030', f.x - 1, b - 9, 2, 2); px(g, '#ffd84a', f.x, b - 8 - ln.tick % 3, 1, 1); } }
@@ -517,11 +550,11 @@ function lnDraw() {
   else if (ln.fireMsg && ln.mode === 'play') pxFont(g, 'Feu de camp : lanterne pleine', W / 2, 34, '#ffd84a', 8, 'center');
   if (ln.mode === 'ready') gameText(g, W, [['LANTERNE', '#ffa030', 16], ['Maintiens pour monter', '#ffffff'], ['Ramasse l\'huile', '#c8a880'], ['Record ' + (games.best.lanterne || 0) + ' m', '#ffd84a']], 84);
   if (ln.mode === 'pause') gameText(g, W, [['PAUSE', '#ffffff', 12], ['Espace pour reprendre', '#c8a880']], 100);
-  if (ln.mode === 'over' && ln.dead > 25) gameText(g, W, [[ln.why, '#ff5a4a', 12], [Math.floor(ln.d / 10) + ' m · ' + ln.got + ' fioles · ' + ln.gem + ' cristaux', '#ffffff'], [ln.record ? 'NOUVEAU RECORD !' : 'Record ' + (games.best.lanterne || 0) + ' m', '#ffd84a'], [ln.dead > 40 ? 'Espace pour repartir' : '', '#c8a880']], 84);
+  if (ln.mode === 'over' && ln.dead > 25) gameText(g, W, [[ln.why, '#ff5a4a', 12], [Math.floor(ln.d / 10) + ' m · ' + ln.got + ' fioles · ' + ln.gem + ' cristaux', '#ffffff'], [ln.lit + ' braseros · ' + ln.stolen + ' ombres', '#b8a8d8'], [ln.record ? 'NOUVEAU RECORD !' : 'Record ' + (games.best.lanterne || 0) + ' m', '#ffd84a'], [ln.dead > 40 ? 'Espace pour repartir' : '', '#c8a880']], 84);
 }
 function lnInfo() {
   lnLamps();
-  $('lnStats').replaceChildren(...[['Plus loin', (games.best.lanterne || 0) + ' m'], ['Parties', lns.games], ['Fioles ramassées', lns.oil], ['Cristaux', lns.gems], ['Distance totale', lns.meters + ' m']].flatMap(([a, b]) => [el('span', '', a), el('b', '', String(b))]));
+  $('lnStats').replaceChildren(...[['Plus loin', (games.best.lanterne || 0) + ' m'], ['Parties', lns.games], ['Fioles ramassées', lns.oil], ['Braseros allumés', lns.braz], ['Cristaux', lns.gems], ['Distance totale', lns.meters + ' m']].flatMap(([a, b]) => [el('span', '', a), el('b', '', String(b))]));
 }
 const lnKey = k => k === ' ' || k === 'ArrowUp' || k === 'Enter' || k === 'w' || k === 'z';
 document.addEventListener('keydown', e => {
@@ -559,6 +592,11 @@ function lnCheck() {  // vérification : la grotte est la même à chaque passag
   }
   lnNew(); ln.mode = 'play'; ln.d = 15100; ln.light = 80; ln.foes = [{kind: 'wisp', x: LN.PX + 40, y: ln.y, a: 0}]; lns.lamp = 2; lnFlare(); if (ln.foes.length || ln.light !== 67) bad.push('éclat phare');
   lns.lamp = 0; lnNew(); ln.mode = 'play'; ln.light = 92; ln.foes = [{kind: 'wisp', x: LN.PX + 120, y: ln.y, a: 0}]; lnFlare(); if (!ln.foes.length) bad.push('portée cuivre');
+  const shade = light => { lnNew(); ln.mode = 'play'; ln.d = 2000; ln.light = light; ln.next = ln.nbat = ln.ngem = ln.nfall = ln.ndrip = ln.nfoe = ln.nshade = 1e9; ln.nextFire = ln.nextBraz = 1e9; const [t, b] = lnCave(ln.d + LN.PX); ln.y = (t + b) / 2;
+    ln.shades = [{x: LN.PX + 90, y: ln.y, burn: 0, a: 0}]; for (let i = 0; i < 120 && ln.shades.length; i++) { ln.light = light; ln.y = lnCave(ln.d + LN.PX).reduce((a, c) => a + c) / 2; ln.vy = 0; lnUpdate(); } return ln.stolen; };
+  if (shade(100) !== 0) bad.push('ombre pas fondue'); if (shade(30) !== 1) bad.push('ombre ne vole pas');
+  lnNew(); ln.mode = 'play'; ln.d = 2000; ln.light = 80; ln.braz = [{x: LN.PX + 60, lit: false, paid: false}]; lnFlare(); const flared = ln.braz[0].lit; ln.light = 50; ln.braz[0].x = LN.PX + 1; ln.next = ln.nbat = ln.ngem = ln.nshade = 1e9; ln.y = lnCave(ln.d + LN.PX).reduce((a, c) => a + c) / 2; lnUpdate();
+  if (!flared || !ln.braz[0].paid || ln.light < 58) bad.push('brasero ' + flared + ' ' + Math.round(ln.light));
   if (LN_LAMPS.some((L, i) => i && (L.need <= LN_LAMPS[i - 1].need || L.max < 92))) bad.push('lanternes');
   if (realBest === undefined) delete games.best.lanterne; else games.best.lanterne = realBest; Object.assign(lns, realStats);
   ln = keep; lnMute = false;

@@ -24,6 +24,10 @@ module.exports = async ({ pj, sleep }) => {
     await sleep(120); await shot(n); await C('ln.foes = []; return 0;');
     const z = await C('return T.mus.zone;'); if (z !== zk) throw new Error('la musique devait passer à la zone ' + zk + ' : ' + z);
   }
+  // les ombres et les braseros : un brasero allumé troue le noir devant, les ombres arrivent
+  await C('ln.d = 2300; ln.zone = 0; ln.light = 42; ln.foes = []; ln.nfoe = ln.nshade = 1e9; ln.nextBraz = 1e9; ln.braz = [{x: 190, lit: true, paid: false}, {x: 262, lit: false, paid: false}]; ln.shades = [{x: 150, y: ln.y - 14, burn: 0, a: 0}, {x: 230, y: ln.y + 10, burn: 0, a: 1}]; return 0;');
+  await sleep(150); await shot('5-ombres-braseros'); const sb = await C('const r = ln.braz.length + " " + ln.shades.length; ln.shades = []; ln.braz = []; ln.nshade = 1e9; return r;');
+  if (!sb.startsWith('2 ')) throw new Error('braseros : ' + sb);
   const notes = await C('return T.mus.notes;'); if (!(notes > s1.notes)) throw new Error('la musique ne joue aucune note');
   // pause : la musique se tait
   await pj('clearInterval(__auto), 0'); await key('p'); await sleep(400); if (await C('return T.mus.on;')) throw new Error('la musique devait se taire en pause');

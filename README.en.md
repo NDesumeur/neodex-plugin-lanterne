@@ -4,6 +4,11 @@ An endless flying game in the dark: a small traveller crosses a cave with her la
 
 *Version française : [README.md](README.md)*
 
+## Shadows and braziers (new in 1.2.0)
+
+- Light becomes a real resource: beyond 150 m, **shadows** come out of the dark towards you. They melt in your light, faster when the flame is big; if one reaches you, it **steals oil**.
+- **Braziers** on the ground, every 250 to 400 m: they light up when you pass very close, or from afar with the **flash**. Once lit, they light up the cave around them and revive the flame when you pass by.
+
 ## Controls
 
 - Hold **Space**, **click** or **↑** to rise; release to come back down.

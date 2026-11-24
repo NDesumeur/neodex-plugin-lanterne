@@ -4,6 +4,11 @@ Un jeu de vol sans fin dans le noir : une petite voyageuse traverse une grotte a
 
 *English version: [README.en.md](README.en.md)*
 
+## Ombres et braseros (nouveau en 1.2.0)
+
+- La lumière devient une vraie ressource : au-delà de 150 m, des **ombres** sortent du noir et viennent vers toi. Elles fondent dans ta lumière, d'autant plus vite que la flamme est grande ; si l'une t'atteint, elle **vole de l'huile**.
+- Des **braseros** au sol, tous les 250 à 400 m : ils s'allument quand tu passes tout près, ou de loin avec l'**éclat**. Allumés, ils éclairent la grotte autour d'eux et ravivent la flamme quand tu passes devant.
+
 ## Commandes
 
 - Maintiens **Espace**, **clic** ou **↑** pour monter ; relâche pour redescendre.

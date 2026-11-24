@@ -87,7 +87,6 @@
  "Une araignée !": "A spider!",
  "Une chauve-souris !": "A bat!",
  "Une stalactite est tombée": "A stalactite fell",
- "Vol sans fin dans une grotte obscure : maintiens Espace ou le clic pour monter, relâche pour descendre. La flamme de la lanterne baisse sans arrêt ; ramasse les fioles d'huile, les cristaux et un feu de camp tous les 1000 m, évite la roche, les stalactites et les chauves-souris, que l'éclat de lumière fait fuir. Une nouvelle zone tous les 500 m, avec sa créature (araignées, poissons qui sautent, feux follets) et sa musique d'ambiance. Quatre lanternes à débloquer avec les cristaux (plus d'huile, éclat plus large). La voyageuse tient sa lanterne au bout du bras ; jeu à la taille de l'écran et plein écran.": "An endless flight through a dark cave: hold Space or the mouse button to rise, release to fall. The lantern's flame keeps dimming; collect oil flasks, crystals and a campfire every 1000 m, avoid rock, stalactites and bats, which a burst of light scares away. A new zone every 500 m, with its creature (spiders, leaping fish, will-o'-the-wisps) and its ambient music. Four lanterns to unlock with crystals (more oil, wider flash). The traveller holds her lantern at arm's length; the game fits the screen and goes full screen.",
  "Éclat de lumière (X) : coûte de l'huile mais fait fuir les chauves-souris proches. Ramasse les cristaux. Tous les 500 m, une nouvelle zone avec sa musique : stalactites qui tombent et araignées dans la mine, gouttes et poissons qui sautent au lac, feux follets qui te suivent dans la lave…": "Light flash (X): costs oil but scares off nearby bats and creatures. Pick up the crystals. Every 500 m, a new zone with its music: falling stalactites and spiders in the mine, drips and leaping fish at the lake, will-o'-the-wisps that follow you in the lava…",
  "MUSIQUE : OUI": "MUSIC: ON",
  "MUSIQUE :": "MUSIC:",
@@ -99,5 +98,13 @@
  "créature": "creature",
  "éclat phare": "lighthouse glow",
  "portée cuivre": "copper range",
- "Rien n'est synchronisé : tes records restent sur cet appareil.": "Nothing is synced: your records stay on this device."
+ "Rien n'est synchronisé : tes records restent sur cet appareil.": "Nothing is synced: your records stay on this device.",
+ "Au-delà de 150 m, des ombres sortent du noir et viennent vers toi : elles fondent dans ta lumière, d'autant plus vite que la flamme est grande. Si une ombre t'atteint, elle vole de l'huile. Les braseros, au sol, s'allument quand tu passes tout près ou avec l'éclat de loin : allumés, ils éclairent la grotte autour d'eux et ravivent la flamme quand tu passes devant.": "Beyond 150 m, shadows come out of the dark towards you: they melt in your light, faster when the flame is big. If a shadow reaches you, it steals oil. Braziers on the ground light up when you pass very close, or from afar with the flash: once lit, they light up the cave around them and revive the flame when you pass by.",
+ "Braseros allumés": "Braziers lit",
+ "braseros ·": "braziers ·",
+ "ombres": "shadows",
+ "ombre pas fondue": "shadow did not melt",
+ "ombre ne vole pas": "shadow does not steal",
+ "brasero": "brazier",
+ "Vol sans fin dans une grotte obscure : maintiens Espace ou le clic pour monter, relâche pour descendre. La flamme de la lanterne baisse sans arrêt ; ramasse les fioles d'huile, les cristaux et un feu de camp tous les 1000 m, évite la roche, les stalactites et les chauves-souris, que l'éclat de lumière fait fuir. Une nouvelle zone tous les 500 m, avec sa créature (araignées, poissons qui sautent, feux follets) et sa musique d'ambiance. Quatre lanternes à débloquer avec les cristaux (plus d'huile, éclat plus large). La voyageuse tient sa lanterne au bout du bras ; jeu à la taille de l'écran et plein écran. Des ombres qui fondent dans ta lumière et des braseros à allumer.": "An endless flight through a dark cave: hold Space or the mouse button to rise, release to fall. The lantern's flame keeps dimming; collect oil flasks, crystals and a campfire every 1000 m, avoid rock, stalactites and bats, which a burst of light scares away. A new zone every 500 m, with its creature (spiders, leaping fish, will-o'-the-wisps) and its ambient music. Four lanterns to unlock with crystals (more oil, wider flash). The traveller holds her lantern at arm's length; the game fits the screen and goes full screen. Shadows that melt in your light and braziers to light up."
 }
