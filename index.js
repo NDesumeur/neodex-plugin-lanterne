@@ -308,6 +308,9 @@ export default async function (ctx) {
   const saveGames = () => { clearTimeout(gamesTimer); gamesTimer = setTimeout(() => { gamesTimer = null; folder.write('games', games).catch(() => {}); }, 500); };
   const best = (k, v) => { const b = games.best[k]; if (b == null || v > b) { games.best[k] = v; saveGames(); return true; } return false; };
   const gstore = (k, init) => (games[k] ??= init);
+  // les trophées de NeoDex (3.4.8 et plus) : succès et records déclarés dans plugin.json ; sur un NeoDex plus ancien, rien ne se passe
+  const trophy = id => { ctx.games?.unlock(id).catch(() => {}); };
+  const trophyRecord = (id, v) => { if (v != null && Number.isFinite(+v)) ctx.games?.record(id, +v).catch(() => {}); };
 function gameLoop(st, appKey, update, draw) {
   cancelAnimationFrame(st.raf);
   const STEP = 1000 / 60; let acc = 0, last = performance.now();
@@ -553,6 +556,7 @@ function lnDraw() {
   if (ln.mode === 'over' && ln.dead > 25) gameText(g, W, [[ln.why, '#ff5a4a', 12], [Math.floor(ln.d / 10) + ' m · ' + ln.got + ' fioles · ' + ln.gem + ' cristaux', '#ffffff'], [ln.lit + ' braseros · ' + ln.stolen + ' ombres', '#b8a8d8'], [ln.record ? 'NOUVEAU RECORD !' : 'Record ' + (games.best.lanterne || 0) + ' m', '#ffd84a'], [ln.dead > 40 ? 'Espace pour repartir' : '', '#c8a880']], 84);
 }
 function lnInfo() {
+  setTimeout(lnTrophies);
   lnLamps();
   $('lnStats').replaceChildren(...[['Plus loin', (games.best.lanterne || 0) + ' m'], ['Parties', lns.games], ['Fioles ramassées', lns.oil], ['Braseros allumés', lns.braz], ['Cristaux', lns.gems], ['Distance totale', lns.meters + ' m']].flatMap(([a, b]) => [el('span', '', a), el('b', '', String(b))]));
 }
@@ -603,6 +607,13 @@ function lnCheck() {  // vérification : la grotte est la même à chaque passag
   return bad.join(' | ') || 'ok';
 }
 { const c = lnCheck(); console.assert(c === 'ok', 'lanterne', c); $('lnCanvas').__ln = {check: lnCheck, st: () => ln, lns, mus: lnMus, lamps: LN_LAMPS, info: () => lnInfo(), cave: lnCave, again: () => lnNew()}; }
+// les trophées, tirés des statistiques et des records gardés (aussi à l'ouverture : ce qui a été fait avant compte)
+function lnTrophies() {
+  const b = games.best.lanterne, sig = [b, lns.games, lns.gems, lns.braz, lns.meters].join(); if (sig === lnTrophies.sig) return; lnTrophies.sig = sig;
+  trophyRecord('distance', b || null);
+  if (b != null) trophy('premier'); if (b >= 150) trophy('m150'); if (b >= 500) trophy('m500'); if (b >= 1500) trophy('m1500');
+  if (lns.gems >= 200) trophy('gemmes'); if (lns.braz >= 50) trophy('braseros'); if (lns.meters >= 10000) trophy('km');
+}
 ctx.onOpen(() => {
   if (!ln || !ln.g) { lnNew(); ln.g = $('lnCanvas').getContext('2d'); }
   if (ln.mode !== 'play') ln.light = Math.round(lnLamp().max * .76);

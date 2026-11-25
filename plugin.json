@@ -1,7 +1,7 @@
 {
   "id": "neodex.lanterne",
   "name": "Lanterne",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": "NDesumeur",
   "description": "Vol sans fin dans une grotte obscure : maintiens Espace ou le clic pour monter, relâche pour descendre. La flamme de la lanterne baisse sans arrêt ; ramasse les fioles d'huile, les cristaux et un feu de camp tous les 1000 m, évite la roche, les stalactites et les chauves-souris, que l'éclat de lumière fait fuir. Une nouvelle zone tous les 500 m, avec sa créature (araignées, poissons qui sautent, feux follets) et sa musique d'ambiance. Quatre lanternes à débloquer avec les cristaux (plus d'huile, éclat plus large). La voyageuse tient sa lanterne au bout du bras ; jeu à la taille de l'écran et plein écran. Des ombres qui fondent dans ta lumière et des braseros à allumer.",
   "icon": "icon.png",
@@ -22,5 +22,52 @@
   "sdk": "2.1.0",
   "permissions": [
     "storage"
+  ],
+  "succes": [
+    {
+      "id": "premier",
+      "nom": "Une lueur",
+      "texte": "Finir un premier vol"
+    },
+    {
+      "id": "m150",
+      "nom": "Les ombres",
+      "texte": "Voler 150 mètres d'un coup"
+    },
+    {
+      "id": "m500",
+      "nom": "Au fond de la grotte",
+      "texte": "Voler 500 mètres d'un coup"
+    },
+    {
+      "id": "m1500",
+      "nom": "Flamme éternelle",
+      "texte": "Voler 1 500 mètres d'un coup",
+      "cache": true
+    },
+    {
+      "id": "gemmes",
+      "nom": "Chercheur de gemmes",
+      "texte": "Ramasser 200 gemmes en tout"
+    },
+    {
+      "id": "braseros",
+      "nom": "Allumeur",
+      "texte": "Allumer 50 braseros en tout"
+    },
+    {
+      "id": "km",
+      "nom": "Spéléologue",
+      "texte": "Voler 10 kilomètres en tout"
+    }
+  ],
+  "records": [
+    {
+      "id": "distance",
+      "nom": "Plus long vol",
+      "sens": "haut",
+      "format": "nombre",
+      "unite": "m"
+    }
   ]
 }
